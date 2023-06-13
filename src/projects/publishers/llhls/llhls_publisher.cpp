@@ -236,15 +236,6 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
-		auto host_config_item = ocst::Orchestrator::GetInstance()->GetHostInfo(vhost_name);
-		if(!host_config_item.has_value()){
-			logte("Could not resolve host config from vhost name: %s", vhost_name);
-			response->SetStatusCode(http::StatusCode::NotFound);
-			return http::svr::NextHandler::DoNotCall;
-		}
-
-		auto host_config = host_config_item.value();
-
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
 		if (vhost_app_name.IsValid() == false)
 		{
@@ -302,6 +293,23 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 
 		auto host_name = final_url->Host();
 		auto stream_name = final_url->Stream();
+
+		auto vhost_name = ocst::Orchestrator::GetInstance()->GetVhostNameFromDomain(host_name);
+		if (vhost_name.IsEmpty())
+		{
+			logte("Could not resolve vhost name from domain: %s", host_name.CStr());
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto host_config_item = ocst::Orchestrator::GetInstance()->GetHostInfo(vhost_name);
+		if(!host_config_item.has_value()){
+			logte("Could not resolve host config from vhost name: %s", vhost_name);
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto host_config = host_config_item.value();
 
 		uint64_t session_life_time = 0;
 		bool access_control_enabled = IsAccessControlEnabled(final_url);
