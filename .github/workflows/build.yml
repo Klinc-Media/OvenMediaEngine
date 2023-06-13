@@ -1,0 +1,25 @@
+name: Build Containers & Push to Canister
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-docker-image:
+    name: Build and Push Docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build and push Docker image
+        uses: opspresso/action-docker@master
+        env:
+          USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          REGISTRY: cloud.canister.io:5000
+          IMAGE_NAME: strayuru/ome
+          DOCKERFILE: ./Dockerfile
+          BUILD_PATH: .
+          LATEST: true
+          TAG_NAME: ${{ github.sha }}
