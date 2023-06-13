@@ -19,7 +19,7 @@ jobs:
           PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
           REGISTRY: cloud.canister.io:5000
           IMAGE_NAME: strayuru/ome
-          DOCKERFILE: ./Dockerfile
+          DOCKERFILE: ./Dockerfile.local
           BUILD_PATH: .
           LATEST: true
           TAG_NAME: ${{ github.sha }}
