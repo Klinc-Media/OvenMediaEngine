@@ -236,6 +236,15 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			return http::svr::NextHandler::DoNotCall;
 		}
 
+		auto host_config_item = ocst::Orchestrator::GetInstance()->GetHostInfo(vhost_name);
+		if(!host_config_item.has_value()){
+			logte("Could not resolve host config from vhost name: %s", vhost_name);
+			response->SetStatusCode(http::StatusCode::NotFound);
+			return http::svr::NextHandler::DoNotCall;
+		}
+
+		auto host_config = host_config_item.value();
+
 		auto vhost_app_name = ocst::Orchestrator::GetInstance()->ResolveApplicationNameFromDomain(request_url->Host(), request_url->App());
 		if (vhost_app_name.IsValid() == false)
 		{
@@ -463,10 +472,19 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 				session_key = id_key[1];
 			}
 
+
+			auto &webhooks_config = host_config.GetAdmissionWebhooks();
+			bool host_uses_signed_policy = true;
+			if (!webhooks_config.IsParsed())
+			{
+				// The vhost doesn't use the SignedPolicy feature.
+				host_uses_signed_policy = false;
+			}
+				
 			session = std::static_pointer_cast<LLHlsSession>(stream->GetSession(session_id));
 			if (session == nullptr)
 			{
-				if (access_control_enabled == true)
+				if (access_control_enabled == true && host_uses_signed_policy)
 				{
 					logte("Invalid session_key : %s", final_url->ToUrlString().CStr());
 					response->SetStatusCode(http::StatusCode::Unauthorized);
@@ -490,7 +508,7 @@ std::shared_ptr<LLHlsHttpInterceptor> LLHlsPublisher::CreateInterceptor()
 			}
 			else
 			{
-				if (access_control_enabled == true && session_key != session->GetSessionKey())
+				if (access_control_enabled == true && host_uses_signed_policy && session_key != session->GetSessionKey())
 				{
 					logte("Invalid session_key : %s", final_url->ToUrlString().CStr());
 					response->SetStatusCode(http::StatusCode::Unauthorized);
